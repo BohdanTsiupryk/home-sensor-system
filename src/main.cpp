@@ -5,6 +5,7 @@
 #include <SPI.h>
 
 #define ARRAY_SIZE 4
+#define TRANSMITED_DATA_SIZE 32
 #define CHANNEL 0x70
 
 #define LED LED_BUILTIN
@@ -19,8 +20,11 @@ RF24 radio(9,10);
 
 char* key[] = {"5300AA56E04F", "5300AC75A62C"};
 byte address[][6] = {"1Node", "2Node", "3Node", "4Node", "5Node", "6Node"};
-boolean signOn = false;
-boolean alarm = false;
+byte notTramsmitedData[TRANSMITED_DATA_SIZE];
+
+bool signOn = false;
+bool alarm = false;
+const byte DEVICE_ID = 2;
 
 HomeSensor SR501_1("SR501_1", 10, true);
 HomeSensor SR501_2("SR501_2", 11, true);
@@ -29,30 +33,27 @@ HomeSensor DOOR_2("DOOR_2", 3, true);
 HomeSensor sensors[ARRAY_SIZE] = {SR501_1, SR501_2, DOOR_1, DOOR_2};
 
 void checkRfid() {
-	if (!signOn) {
-		if (rfid.available() && rfid.find(key[0])) {
-			Serial.println("SIGNALIATION OFF");
-			signOn = true;
-			alarm = false;
-			digitalWrite(LED, LOW);
-			rfid.end();
-		}
+	if (rfid.available() && rfid.find(key[0])) {
+		Serial.println("SIGNALIATION OFF");
+		alarm = false;
+		digitalWrite(LED, LOW);
+		rfid.end();
 	}
 }
 
 void checkSensors() {
 	for (size_t i = 0; i < ARRAY_SIZE; i++) {
 		if (sensors[i].checkSensor()) {
-			Serial.println(sensors[i].getName());
+			sensors[i].worked();
+			alarm = true;	
 		}
 	}
-	
 }
 
 void radioSetup() {
 	radio.begin();
  	radio.setAutoAck(1);         
- 	radio.setRetries(0, 15);    
+ 	radio.setRetries(1, 15);    
  	radio.enableAckPayload();    
 	radio.setPayloadSize(32);     
 
@@ -68,24 +69,38 @@ void radioSetup() {
 	Serial.println("Finished config nRF on chanel - " + CHANNEL);
 }
 
-void sendData() {
+void sendData(byte data[]) {
+	radio.stopListening();
+	delay(20);
+	radio.openWritingPipe(address[0]);
+	radio.write(data, sizeof(data));
+	radio.startListening();
+	delay(30);
+}
 
+void formAndSendData() {
+	byte data[6];
+	data[0] = DEVICE_ID;
+	data[1] = alarm;
+	for (byte i = 0; i < ARRAY_SIZE; i++) {
+		data[i + 2] = sensors[i].getStatus();
+	}
+	
+	sendData(data);
 }
 
 void setup() {
 	Serial.begin(9600);
 	rfid.begin(9600);
-
+	radioSetup();
 	Serial.println("start");
 }
 
 void loop() {
 	if (alarm) {
-		
+		checkRfid();
 	} else {
 		checkSensors();
 	}
-	
-	
-	checkSensors();
+	formAndSendData();
 }
