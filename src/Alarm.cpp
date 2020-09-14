@@ -25,12 +25,16 @@ void Alarm::play() {
 }
 
 void Alarm::startPlay() {
-    flag = true;
-    time = millis();
+    if (!flag) {
+        flag = true;
+        time = millis();
+    }
 }
 
 void Alarm::stop() {
-    flag = false;
-    back = false;
-    count = 0;
+    if (flag) {
+        flag = false;
+        back = false;
+        count = 0;
+    }
 }
