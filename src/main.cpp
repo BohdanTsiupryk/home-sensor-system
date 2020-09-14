@@ -3,6 +3,7 @@
 #include <HomeSensor.h>
 #include <RF24.h>
 #include <SPI.h>
+#include <Alarm.h>
 
 #define ARRAY_SIZE 4
 #define TRANSMITED_DATA_SIZE 32
@@ -14,6 +15,7 @@
 #define SENSOR_2 2
 #define SENSOR_3 3
 #define SENSOR_4 4
+#define BUZZER 6
 
 SoftwareSerial rfid(7, 8); // RX, TX
 RF24 radio(9,10);
@@ -25,6 +27,8 @@ byte notTramsmitedData[TRANSMITED_DATA_SIZE];
 bool signOn = false;
 bool alarm = false;
 const byte DEVICE_ID = 2;
+
+Alarm alarmPlayer(BUZZER);
 
 HomeSensor SR501_1("SR501_1", 10, true);
 HomeSensor SR501_2("SR501_2", 11, true);
@@ -99,8 +103,11 @@ void setup() {
 void loop() {
 	if (alarm) {
 		checkRfid();
+		alarmPlayer.startPlay();
 	} else {
 		checkSensors();
+		alarmPlayer.stop();
 	}
-	formAndSendData();
+	alarmPlayer.play();
+	// formAndSendData();
 }
