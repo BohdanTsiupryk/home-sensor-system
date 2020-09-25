@@ -3,6 +3,7 @@
 
 Alarm::Alarm(uint8_t pin) {
     Alarm::pin = pin;
+    pinMode(pin, OUTPUT);
     flag = false;
     back = false;
     timeDelay = 10;
